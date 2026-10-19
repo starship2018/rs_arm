@@ -49,3 +49,21 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
+
+# ReBot Arm Digital Twin RS
+rebotarm_ros2_RS/build/
+rebotarm_ros2_RS/install/
+rebotarm_ros2_RS/log/
+rebotarm_ros2_RS/.venv/
+/build/
+/install/
+/log/
+**/__pycache__/
+**/*.pyc
+reBotArm_simulator-RS/.certs/
+reBotArm_simulator-RS/.env
+web_mujoco/node_modules/
+web_mujoco/dist/
+.vite/
+!reBotArm_simulator-RS/public/lib/
+!reBotArm_simulator-RS/public/lib/**

@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-
+#
+# 作用：仅启动真实 RS 机械臂的 ros2_control bringup（can0，/rebotarm）。
+#   - 安全门禁：需设置 REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE，
+#     并确认工作区域无人、急停可用。
+#   - 使用单实例锁，自动结束遗留的本脚本进程或外部启动的 reBotArm 控制器。
+#   - 清理 Fast DDS 残留的共享内存端口文件，避免新节点发现异常。
+#   - 检查 can0 存在后启动 bringup.launch.py。
+#
 set -euo pipefail
 
 REBOTARM_HARDWARE_LOCK="${XDG_RUNTIME_DIR:-/tmp}/rebotarm_rs_hardware.lock"

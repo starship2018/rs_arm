@@ -68,7 +68,7 @@ npm run build:pages
 先在仓库根目录构建 ROS 2 工作区：
 
 ```bash
-./scripts/setup_rs_workspace.sh
+./scripts/setup_rs_workspace_init.sh
 ```
 
 然后启动 RS Fake Driver、MuJoCo 动力学 Viewer、抓取 Agent 和 rosbridge：

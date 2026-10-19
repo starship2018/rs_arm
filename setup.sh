@@ -26,7 +26,7 @@ Usage: ./setup.sh [--check] [--yes]
 The installer preserves existing configuration. The control SDK is vendored
 as ordinary files, and MuJoCo model assets are integrated into the ROS package. This command
 installs only missing dependencies, then creates the Python environment and
-builds the ROS workspace through scripts/setup_rs_workspace.sh.
+builds the ROS workspace through scripts/setup_rs_workspace_init.sh.
 EOF
 }
 
@@ -332,10 +332,10 @@ if ((CHECK_ONLY)); then
   fi
 else
   log 'Creating the reproducible Python/SDK/model workspace and building ROS packages'
-  if ROS_DISTRO="${ROS_DISTRO}" "${ROOT_DIR}/scripts/setup_rs_workspace.sh"; then
+  if ROS_DISTRO="${ROS_DISTRO}" "${ROOT_DIR}/scripts/setup_rs_workspace_init.sh"; then
     record_installed 'RS workspace dependencies and colcon build checked/updated'
   else
-    record_failed 'scripts/setup_rs_workspace.sh failed'
+    record_failed 'scripts/setup_rs_workspace_init.sh failed'
     exit 1
   fi
 fi

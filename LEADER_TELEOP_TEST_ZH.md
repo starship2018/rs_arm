@@ -11,7 +11,7 @@ bash scripts/setup_rs_leader.sh
 ```
 
 脚本复用 ROS .venv，安装 UART SDK/pyserial，重建 rebotarm_msgs、rebotarmcontroller。
-如果 Ubuntu 从未搭建工作区，先运行 `bash scripts/setup_rs_workspace.sh`，再运行上面命令。
+如果 Ubuntu 从未搭建工作区，先运行 `bash scripts/setup_rs_workspace_init.sh`，再运行上面命令。
 主臂 USB 必须连接 ROS 主机；ROS 在虚拟机时要透传 USB。网页电脑的 COM 口不能代替 ROS 主机串口。
 
 新终端检查：

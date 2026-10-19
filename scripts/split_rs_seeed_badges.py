@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Split the upper RS Seeed Studio badge from its black PLA binary STL.
 
+作用：从上臂黑色 PLA 模型的二进制 STL 中拆出 Seeed Studio 徽标及其
+e/d/o 字母内部的独立岛屿，单独导出为 STL。保留原始坐标，便于 URDF/MJCF
+给黄色徽标单独赋材质，而凹陷字母仍透出黑色本体。
+
 The SolidWorks export stores the long rounded badge as two disconnected shells
 (one on each side of the arm).  The counters inside e/d/o are separate islands,
 so they must move with the badge as well.  Keeping the original coordinates and

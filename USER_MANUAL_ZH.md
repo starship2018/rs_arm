@@ -60,7 +60,7 @@ cd /home/robot/ReBot_Arm_DigitalTwin_RS
 重建 ROS 工作区：
 
 ```bash
-./scripts/setup_rs_workspace.sh
+./scripts/setup_rs_workspace_init.sh
 ```
 
 ## 4. 启动完整 MuJoCo 仿真

@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-
+#
+# 作用：启动完整的 RS 纯仿真环境（不连接真实硬件）。
+#   - fake_rs_bringup 假驱动（/rebotarm_rs）与 MuJoCo 仿真（物理/运动学）。
+#   - 可选启动 MCP 抓取代理（默认 8081）和 rosbridge（9090），端口已被占用则复用。
+#   - 使用 /tmp/rebotarm_rs_sim.lock 保证单实例，退出时按进程组清理子进程。
+# 参数：--force / -f 先清理遗留的 RS 仿真进程与锁再启动。
+# 常用环境变量：REBOTARM_MUJOCO_MODE、REBOTARM_MUJOCO_VIEWER、
+#   REBOTARM_WRIST_CAMERA_MODEL、REBOTARM_START_AGENT、REBOTARM_USE_RVIZ。
+#
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rs_env.sh"

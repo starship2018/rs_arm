@@ -71,19 +71,18 @@
 2. 将夹爪电机接入同一条 CAN 总线。
 3. 将 USB2CAN 插入主机，并确认设备名：
 
-```bash
-ls /dev/ttyACM*
-```
-
-如果需要临时开放串口权限：
-
-```bash
-sudo chmod 666 /dev/ttyACM0
-```
 
 RS 默认使用 SocketCAN。启动 ROS2 驱动前先拉起 CAN 接口：
 
+
+
 ```bash
+#套件里是 PCAN-USB，通常应该直接出现 can0 或 can1
+sudo modprobe peak_usb
+ip -br link
+
+#如果出现 can0，再设置 bitrate
+sudo ip link set can0 down 2>/dev/null
 sudo ip link set can0 up type can bitrate 1000000
 ip -details link show can0
 ```
@@ -94,8 +93,12 @@ ip -details link show can0
 
 ### Step 1. 安装 ROS2 依赖
 
-请参考[ROS官方下载文档](https://www.ros.org/blog/getting-started/)选择适合的版本进行安装。
 
+推荐鱼香ROS全自动安装脚本
+
+```bash
+wget http://fishros.com/install -O fishros && . fishros
+```
 ### Step 2. 使用集成的 ROS2 工作区
 
 本目录已经包含在 `ReBot_Arm_DigitalTwin_RS` 父仓库中。只需 clone 一次父仓库，再进入
@@ -182,7 +185,7 @@ rebotarm_ros2_RS/
 
 在正式开始使用机械臂前请注意： **机械臂的控制器具有较高自由度，启用控制器或者给机械臂上电前务必注意械臂工作空间内无人和障碍物。同时，请严格审查每一次对机械臂的运动控制，避免出现意外。严禁危险操作，造成后果自负。**
 
-### 启动完整系统
+### 1.启动完整系统
 
 启动控制节点、`robot_state_publisher`，可选 RViz：
 
@@ -206,7 +209,7 @@ ros2 launch rebotarm_bringup bringup.launch.py model:=rs channel:=can0
 ros2 launch rebotarm_bringup bringup.launch.py use_rviz:=true
 ```
 
-### 只启动控制节点
+### 2.只启动控制节点
 
 和上述```bringup.launch.py```不同，如果希望最小化机械臂控制操作而不启用多余的`robot_state_publisher`
 或者 RViz 可视化，那么可以直接启动：
@@ -215,7 +218,7 @@ ros2 launch rebotarm_bringup bringup.launch.py use_rviz:=true
 ros2 launch rebotarm_bringup driver.launch.py
 ```
 
-### 直接运行控制节点
+### 3.直接运行控制节点(不推荐)
 
 ```bash
 ros2 run rebotarmcontroller reBotArmController
@@ -230,11 +233,12 @@ ros2 run rebotarmcontroller reBotArmController
 
 不运行 demo 时，可以直接调用 ROS service 和 action 完成一次末端位姿移动。
 先在一个终端启动控制节点：
+** 按照上面快速启动章节中的3个方法之一启动即可 **
 
 ```bash
 cd your/path/to/rebotarm_ros2_RS
 source install/setup.bash
-ros2 launch rebotarm_bringup bringup.launch.py channel:=/dev/ttyACM0
+ros2 launch rebotarm_bringup bringup.launch.py use_rviz:=true
 ```
 
 然后在另一个终端执行控制命令：

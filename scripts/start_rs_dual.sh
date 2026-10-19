@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-
+#
+# 作用：同时启动真实 RS 机械臂与 RS 假驱动仿真，并启动 rosbridge。
+#   - 真实硬件：bringup.launch.py（can0，命名空间 /rebotarm）。
+#   - 仿真镜像：fake_rs_bringup.launch.py（命名空间 /rebotarm_rs）。
+#   - 复用或启动 9090 端口的 rosbridge。
+# 安全：默认拒绝运行，需设置
+#   REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE。
+# 互斥：与 start_rs_sim.sh 共用 /tmp/rebotarm_rs_sim.lock，防止重复启动。
+#
 set -euo pipefail
 
 if [[ "${REBOTARM_RS_HARDWARE_CONFIRM:-}" != "I_UNDERSTAND_RS_WILL_MOVE" ]]; then

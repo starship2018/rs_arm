@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-
+#
+# 作用：启动 MuJoCo 运动学镜像，让仿真模型跟随真实 RS 机械臂显示。
+#   - 订阅 /rebotarm/joint_states（可用 REBOTARM_MIRROR_NAMESPACE 覆盖）。
+#   - 仅做可视化跟随，不发送力矩、不打开 SocketCAN，因此无需硬件确认。
+#   - 需先启动真实 RS 控制器，否则只会给出提示并等待其发布状态。
+#
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rs_env.sh"

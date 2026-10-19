@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-
+#
+# 作用：公共环境引导脚本，供其他启动/安装脚本通过 source 调用。
+#   - 自动识别 ROS 2 发行版（Ubuntu 22.04 -> humble，其余 -> jazzy）。
+#   - 校验并依次加载 ROS 2、RS 工作空间 install/setup.bash 和项目 .venv。
+#   - 默认将 DDS 自动发现范围限制为 LOCALHOST，避免 Wi-Fi 换网后节点失联。
+#   - 把 venv 与 cmeel 的 site-packages 追加到 PYTHONPATH。
+# 注意：本脚本需通过 source 在当前 shell 中生效，请勿直接执行。
+#
 set -eo pipefail
 
 REBOTARM_RS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -26,13 +33,13 @@ fi
 
 if [[ ! -f "${REBOTARM_WS_SETUP}" ]]; then
   echo "RS workspace has not been built: ${REBOTARM_WS_SETUP}" >&2
-  echo "Run scripts/setup_rs_workspace.sh first." >&2
+  echo "Run scripts/setup_rs_workspace_init.sh first." >&2
   exit 1
 fi
 
 if [[ ! -f "${REBOTARM_VENV_ACTIVATE}" ]]; then
   echo "RS Python environment has not been created: ${REBOTARM_VENV_ACTIVATE}" >&2
-  echo "Run scripts/setup_rs_workspace.sh first." >&2
+  echo "Run scripts/setup_rs_workspace_init.sh first." >&2
   exit 1
 fi
 

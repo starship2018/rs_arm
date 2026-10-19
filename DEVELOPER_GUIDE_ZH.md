@@ -31,7 +31,7 @@ ReBot_Arm_DigitalTwin_RS/
 ├── requirements-rs-hardware.txt      # RS SDK Python 依赖
 ├── requirements-rs-mujoco.txt        # MuJoCo/Agent Python 依赖
 ├── scripts/
-│   ├── setup_rs_workspace.sh         # 固定上游版本、打补丁、colcon 构建
+│   ├── setup_rs_workspace_init.sh         # 固定上游版本、打补丁、colcon 构建
 │   ├── rs_env.sh                     # 统一加载 ROS、venv、workspace
 │   ├── start_rs_sim.sh               # Fake Driver + MuJoCo + Agent + rosbridge
 │   ├── start_rs_hardware.sh          # 真机独占、安全替换旧实例
@@ -74,10 +74,10 @@ cd /home/robot/ReBot_Arm_DigitalTwin_RS
 仅重建 ROS 工作区可运行：
 
 ```bash
-./scripts/setup_rs_workspace.sh
+./scripts/setup_rs_workspace_init.sh
 ```
 
-`setup_rs_workspace.sh` 是 `setup.sh` 调用的下层构建脚本。它假定 ROS 2 已经安装好，只负责：
+`setup_rs_workspace_init.sh` 是 `setup.sh` 调用的下层构建脚本。它假定 ROS 2 已经安装好，只负责：
 
 - 创建 `rebotarm_ros2_RS/.venv` 并安装 RS 真机、MuJoCo 和 Agent 的 Python 依赖；
 - 拉取固定版本的 RS 控制 SDK 与 RS MuJoCo 模型；
@@ -86,7 +86,7 @@ cd /home/robot/ReBot_Arm_DigitalTwin_RS
 
 新机器应优先运行根目录的 `./setup.sh --yes`，因为它还会安装 ROS、Node、SocketCAN 等
 系统依赖。只有系统依赖已经齐全，需要重新生成/构建 ROS 工作区时，才直接运行
-`setup_rs_workspace.sh`。
+`setup_rs_workspace_init.sh`。
 
 修改 Python 包以后通常只需：
 

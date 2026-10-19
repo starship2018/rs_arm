@@ -184,7 +184,7 @@ REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE ./rebotarm start rs
 ./rebotarm stop
 ```
 
-日常使用统一通过 `rebotarm` 入口。`scripts/setup_rs_workspace.sh` 是一键安装脚本内部使用的
+日常使用统一通过 `rebotarm` 入口。`scripts/setup_rs_workspace_init.sh` 是一键安装脚本内部使用的
 ROS 工作区构建器；`scripts/start_rs_dual.sh` 仅用于同时启动真机 `/rebotarm` 和 Fake Driver
 `/rebotarm_rs` 做接口对照，不包含完整 MuJoCo 场景。
 

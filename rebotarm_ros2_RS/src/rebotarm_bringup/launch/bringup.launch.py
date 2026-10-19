@@ -16,6 +16,14 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
+def _venv_paths(workspace_root, pyver):
+    venv_site = os.path.join(workspace_root, ".venv", "lib", pyver, "site-packages")
+    if not os.path.isdir(venv_site):
+        return []
+    cmeel_site = os.path.join(venv_site, "cmeel.prefix", "lib", pyver, "site-packages")
+    return [cmeel_site, venv_site] if os.path.isdir(cmeel_site) else [venv_site]
+
+
 def _resolve_venv_pythonpath():
     """算出 venv site-packages 路径并拼到 PYTHONPATH 前面。
 
@@ -24,22 +32,20 @@ def _resolve_venv_pythonpath():
     让直接 ros2 launch 也能找到这些包，无需手动 source rs_env.sh。
     """
     try:
+        # share_dir 是 .../install/rebotarm_bringup/share/rebotarm_bringup。
+        # 仓库既可能在 rebotarm_ros2_RS 子目录构建，也可能在仓库根目录构建
+        # （此时 .venv 仍在 rebotarm_ros2_RS 下），所以逐级向上查找两种布局。
         share_dir = get_package_share_directory("rebotarm_bringup")
-        # share_dir 是 .../install/rebotarm_bringup/share/rebotarm_bringup
-        # 往上四级到工作区根目录
-        ws_root = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(share_dir)))
-        )
         pyver = "python{}.{}".format(sys.version_info.major, sys.version_info.minor)
-        venv_site = os.path.join(ws_root, ".venv", "lib", pyver, "site-packages")
-        cmeel_site = os.path.join(
-            venv_site, "cmeel.prefix", "lib", pyver, "site-packages"
-        )
+        candidate = share_dir
         paths = []
-        if os.path.isdir(cmeel_site):
-            paths.append(cmeel_site)
-        if os.path.isdir(venv_site):
-            paths.append(venv_site)
+        for _ in range(6):
+            candidate = os.path.dirname(candidate)
+            paths = _venv_paths(candidate, pyver) or _venv_paths(
+                os.path.join(candidate, "rebotarm_ros2_RS"), pyver
+            )
+            if paths:
+                break
         if not paths:
             return ""
         prefix = ":".join(paths)

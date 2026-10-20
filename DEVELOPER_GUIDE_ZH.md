@@ -138,11 +138,19 @@ REBOTARM_START_AGENT=false ./rebotarm start rs_sim
 确认 USB-CAN 设备已识别后：
 
 ```bash
+./scripts/start_rs_can.sh
+ip -details link show can0
+candump can0
+```
+
+`start_rs_can.sh` 等价于下面的手动命令，并在结束时校验接口确实进入 `UP` 状态；
+停止时执行 `./scripts/stop_rs_can.sh`。接口名/波特率可通过第一个参数或
+`RS_CAN_IFACE` / `RS_CAN_BITRATE` 覆盖。
+
+```bash
 sudo ip link set can0 down 2>/dev/null || true
 sudo ip link set can0 type can bitrate 1000000
 sudo ip link set can0 up
-ip -details link show can0
-candump can0
 ```
 
 `candump` 用于只读观察总线；确认有帧后按 `Ctrl+C` 退出。若接口进入 `BUS-OFF`，先检查

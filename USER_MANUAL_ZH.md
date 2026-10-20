@@ -280,6 +280,14 @@ REBOTARM_TEXT_AGENT_URL=http://虚拟机IP:8082
 ### 9.2 配置 CAN
 
 ```bash
+./scripts/start_rs_can.sh   # 启动 can0（默认 1 Mbps），并打印链路状态
+./scripts/stop_rs_can.sh    # 关闭 can0
+```
+
+接口名或波特率不同时：`./scripts/start_rs_can.sh can1`，或设置
+`RS_CAN_IFACE` / `RS_CAN_BITRATE` 环境变量。对应的手动命令：
+
+```bash
 sudo ip link set can0 down 2>/dev/null || true
 sudo ip link set can0 type can bitrate 1000000
 sudo ip link set can0 up
@@ -302,13 +310,30 @@ REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE \
 ./rebotarm start web
 ```
 
-网页选择“RS 真机（`/rebotarm`）”，连接 `ws://localhost:9090`，打开控制锁并使能。将速度
-限制设为 `0.2–0.4 rad/s`，先小幅移动一个关节，确认方向和反馈一致后再测试其他动作。
+网页选择 **RosBridge** “RS 真机（`/rebotarm`）”，输入并连接 `ws://localhost:9090`，勾选 `镜像目标关节到网页 ` 以及 `允许网页向真机RS发送控制`。
+
+将速度限制设为 `0.2–0.4 rad/s`，先小幅移动一个关节，确认方向和反馈一致后再测试其他动作。
 
 真机控制器只用 `Ctrl+C` 停止，不要使用 `Ctrl+Z`。启动脚本会处理异常残留控制器，避免
 两个进程同时访问 CAN。
 
-### 9.4 真机姿态 MuJoCo 跟随
+### 9.4 查询关节电机温度
+
+温度只在驱动层（`motorbridge` 的 `MotorState.t_mos` / `t_rotor`），ROS 的
+`JointMotorState` 与网页都没有该字段，因此需要先 `Ctrl+C` 停止真机控制器，再用脚本
+直接读取（脚本会先用主动上报取一帧反馈，读完恢复关闭）：
+
+```bash
+./scripts/read_rs_motor_temps.py                # 表格输出，默认阈值 70 °C
+./scripts/read_rs_motor_temps.py --json         # 机器可读
+./scripts/read_rs_motor_temps.py --threshold 60 --timeout 3
+```
+
+脚本会拒绝在 `reBotArmController` 运行时执行，避免两个进程争用 `can0`。
+RobStride 不上报转子温度，`转子温度` 列恒为 `0.0 °C`，请以 `MOS温度`（驱动板温度）
+为准；`状态字` 是电机原始 `status_code`，过温等故障会体现在这里。
+
+### 9.5 真机姿态 MuJoCo 跟随
 
 真机控制器运行后，可在新终端执行：
 

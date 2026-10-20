@@ -90,7 +90,16 @@ MCP 地址：`http://127.0.0.1:8081/mcp`。
 
 ## 快速启动真机
 
-先配置 CAN：
+先配置 CAN（脚本会自动检查接口、设置 1 Mbps 并打印链路状态）：
+
+```bash
+./scripts/start_rs_can.sh   # 启动 can0
+./scripts/stop_rs_can.sh    # 关闭 can0
+```
+
+接口名或波特率不同时可用参数/环境变量覆盖：
+`./scripts/start_rs_can.sh can1` 或 `RS_CAN_IFACE=can1 RS_CAN_BITRATE=500000 ./scripts/start_rs_can.sh`。
+等价的手动命令：
 
 ```bash
 sudo ip link set can0 down 2>/dev/null || true
@@ -182,6 +191,7 @@ Dashboard 默认地址为 `http://localhost:8082`。
 REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE ./rebotarm start rs
 ./rebotarm status
 ./rebotarm stop
+./scripts/read_rs_motor_temps.py   # 停止真机控制器后读取各关节电机温度
 ```
 
 日常使用统一通过 `rebotarm` 入口。`scripts/setup_rs_workspace_init.sh` 是一键安装脚本内部使用的

@@ -1,17 +1,17 @@
-const CACHE_NAME = 'rebot-arm-rs-pwa-v109-d435-normals';
+const CACHE_NAME = 'rebot-arm-rs-pwa-v110-temp01';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/favicon.png',
-  '/css/rebot-sim.css?v=20260813-rs-guide43',
+  '/css/rebot-sim.css?v=20261020-rs-temp01',
   '/js/pwa.js?v=20260812-rs-ctrl32',
-  '/js/i18n.js?v=20261008-rs-camera01',
+  '/js/i18n.js?v=20261020-rs-temp01',
   '/js/rebot-sim.js?v=20261008-rs-camera01',
   '/js/wrist-camera.js?v=20261009-rs-camera03',
   '/js/ros/rebot-ros-client.js?v=20260921-rs-preset-smooth02',
   '/js/control-mode.js?v=20260812-rs-ctrl32',
-  '/js/ros/rebot-ros-ui.js?v=20261007-leader01',
+  '/js/ros/rebot-ros-ui.js?v=20261020-rs-temp01',
   '/js/ros/leader-model.js?v=20261007-leader02',
   '/js/ros/rebot-leader-ui.js?v=20261007-leader02',
   '/css/leader-teleop.css?v=20261007-leader02',

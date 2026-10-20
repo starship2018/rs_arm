@@ -8,17 +8,147 @@
 
 ## 1. 系统组成
 
+本仓库可以从三个视角理解：运行中的服务、控制软件的分层，以及构建产物。三者不是互相
+替代的关系，而是同一套系统的不同切面。
+
+### 1.1 运行服务
+
 | 服务 | 默认地址/命名空间 | 作用 |
 |---|---|---|
 | 网页控制台 | `http://localhost:3002` | 3D、关节、夹爪、视觉和 AI 操作 |
 | rosbridge | `ws://localhost:9090` | 网页与 ROS 2 通信 |
 | RS 仿真 | `/rebotarm_rs` | Fake Driver 和 MuJoCo |
 | RS 真机 | `/rebotarm` | RobStride/SocketCAN 控制 |
+| 电机网关（可选） | `ws://127.0.0.1:9002` | MotorBridge 直连，绕过 ROS |
 | MCP Agent | `http://127.0.0.1:8081/mcp` | 机械臂工具和抓取任务 |
 | text-agent | `http://127.0.0.1:8082` | 网页自然语言助手 |
 
 常规仿真需要两个终端：终端 1 运行仿真，终端 2 运行网页。自然语言控制再使用终端 3
 运行 text-agent。
+
+### 1.2 控制软件栈：motorbridge 与 reBotArm_control_py
+
+控制真机时，一条网页或 ROS 指令按下面的层次向下传递：
+
+```text
+网页控制台 / AI Agent / MoveIt
+        │ ROS 2 topic / service / action
+        ▼
+reBotArmController 节点（rebotarmcontroller 包）
+        │ HardwareManager：命令仲裁、在线轨迹、状态发布
+        ▼
+reBotArm_control_py（机械臂语义层）
+        │ 关节组、FK/IK、动力学、重力补偿、轨迹
+        ▼
+motorbridge（电机与总线驱动层）
+        │ SocketCAN can0 / DM 串口
+        ▼
+RobStride / 达妙电机
+```
+
+**motorbridge 的作用（设备驱动层）**
+
+- 它是独立的 PyPI 包（本仓库锁定 `motorbridge==0.5.1`），不是本仓库源码。Python 侧
+  通过 `Controller`、`Motor`、`Mode`、`MotorState` 等接口调用原生库；wheel 内还带有
+  Rust 编写的 `ws_gateway` WebSocket 网关。
+- 负责“单个电机如何通信”：打开 SocketCAN、CAN-FD 或 DM 串口，按厂商（RobStride、
+  达妙、Hexfellow、MyActuator、HighTorque）编码/解析帧，做超时和错误处理。
+- 提供使能、失能、清错、置零、模式切换，以及 `send_mit`、`send_pos_vel`、`send_vel`、
+  `send_force_pos` 等控制原语；还能读写电机寄存器、轮询反馈、读取状态字和
+  `t_mos`/`t_rotor` 温度。
+- 它不认识机械臂：不知道 URDF、关节链、末端位姿、逆运动学、重力补偿或轨迹。它只保证
+  “这条 CAN 指令被正确发给这个电机，并把反馈取回来”。
+- 在本工程中，`reBotArm_control_py` 是它的主要使用者；`scripts/read_rs_motor_temps.py`
+  也直接用它读取温度。网页的 MotorBridge 直连模式则通过 `ws_gateway` 使用同一套能力。
+
+**reBotArm_control_py 的作用（机械臂语义层）**
+
+该目录是随主仓库提交的 vendored SDK（`rebotarm_ros2_RS/third_party/reBotArm_control_py`，
+非 submodule）。`rebotarmcontroller` 在导入时把它加入 `sys.path`，并使用其
+`config/rebotarm_rs.yaml` 描述 RS 电机 ID、型号、分组和增益。
+
+| SDK 模块 | 作用 |
+|---|---|
+| `actuator` | `RebotArm` / `JointGroup`：按 `arm` 六关节和 `gripper` 分组，负责连接、使能、模式切换、控制循环和分组同步发包 |
+| `kinematics` | 基于 Pinocchio 和 URDF 的正运动学、逆运动学、关节限位与末端坐标系 |
+| `dynamics` | 质量矩阵、科氏力、重力向量、逆动力学等刚体动力学计算 |
+| `controllers` | `RebotArmEndPose` 末端位姿控制、`GravityCompensation` 重力补偿 |
+| `trajectory` | SE(3) 测地线轨迹采样、CLIK 跟踪、关节空间轨迹规划 |
+
+它把“六轴机械臂 + 夹爪”的业务概念翻译成每个电机的 MIT/POS_VEL 指令，再把电机反馈
+组装成关节状态。所有真正的 CAN 收发仍交给 motorbridge，因此它不重复实现设备协议。
+`rebotarmcontroller` 的 `HardwareManager` 正是通过 `RebotArm`、`RebotArmEndPose`、
+`compute_generalized_gravity`、`compute_fk` 等接口把 ROS 层与 SDK 连接起来。
+
+两者的职责边界可以概括为：
+
+| 能力 | motorbridge | reBotArm_control_py |
+|---|---|---|
+| 电机 ID、CAN 帧、超时、模式切换 | 实现 | 调用 |
+| 单电机使能/失能/置零/参数/温度 | 实现 | 调用 |
+| 关节分组、同步发送、控制循环 | 不涉及 | 实现 |
+| URDF FK/IK、关节限位 | 不涉及 | 实现 |
+| 重力补偿、末端控制、轨迹规划 | 不涉及 | 实现 |
+| ROS 话题/服务/动作、命令仲裁 | 不涉及 | 不涉及（由 `rebotarmcontroller` 实现） |
+
+一句话：**motorbridge 让“一个电机”动起来并报回状态，reBotArm_control_py 让“一条
+机械臂”按关节、位姿、轨迹和重力补偿的语义动起来。**
+
+### 1.3 真机的两条控制通路
+
+| 通路 | 链路 | 适用场景 |
+|---|---|---|
+| ROS 2（推荐） | 网页 → rosbridge → `reBotArmController` → `reBotArm_control_py` → motorbridge → `can0` | 正常控制、轨迹、重力补偿、MuJoCo 跟随、AI/视觉抓取 |
+| MotorBridge 直连 | 网页 MotorBridge 面板 → `ws://127.0.0.1:9002` 网关 → `can0` | 单电机调试、扫描、参数和温度读取 |
+
+直连通路绕过 ROS、命令仲裁和安全回零，只适合调试，不能替代物理急停，也不能与
+`reBotArmController` 同时占用同一条 `can0`。`./rebotarm` 不会自动启动 `ws_gateway`，
+需要按 motorbridge 的说明单独运行。MuJoCo 仿真使用 Fake Driver 和 MuJoCo 物理，
+不经过 motorbridge，因此仿真可用不代表真机 CAN 链路已就绪。
+
+### 1.4 仓库构建组成与作用
+
+**构建输入**
+
+| 路径 | 类型 | 作用 |
+|---|---|---|
+| `rebotarm_ros2_RS/src` | colcon 工作空间 | 7 个 ROS 2 包，见下表 |
+| `rebotarm_ros2_RS/third_party/reBotArm_control_py` | vendored Python 源码 | 机械臂语义层 SDK，被控制器直接导入 |
+| `reBotArm_simulator-RS` | Node.js 静态站点 | 端口 3002 的网页控制台，含 ROS、MotorBridge、视觉和 AI 界面 |
+| `web_mujoco` | Vite + MuJoCo WASM | 端口 5173 的独立浏览器仿真，不连接 ROS 和真机 |
+| `scripts`、`setup.sh`、`rebotarm` | 运维脚本 | 环境检查、依赖安装、工作区构建、CAN 启停和服务启动 |
+| `requirements-rs-*.txt` | 依赖锁定 | 硬件、MuJoCo 与可选 leader 臂的 Python 依赖 |
+
+**ROS 2 包**
+
+| 包 | 构建类型 | 产物与作用 |
+|---|---|---|
+| `rebotarm_msgs` | `ament_cmake` | 6 个 msg、5 个 srv、1 个 action；生成 Python/C++ 接口，是构建目录中文件最多的包 |
+| `rebotarmcontroller` | `ament_python` | `reBotArmController`、`FakeRsDriver` 及示例可执行文件；封装硬件、ROS 服务/动作和状态发布 |
+| `rebotarm_bringup` | `ament_python` | launch、硬件配置、URDF/网格、RViz 资源 |
+| `rebotarm_moveit_config` | `ament_cmake` | MoveIt 2 的 SRDF、ros2_control 和 RViz 配置（仅安装配置） |
+| `rebotarm_moveit_demos` | `ament_python` | `pick_place`、`draw_square` 等 MoveIt 示例 |
+| `rebotarm_agent` | `ament_python` | MCP 工具服务（8081）和网页文本助手（8082） |
+| `rebotarm_mujoco_rs` | `ament_python` | MuJoCo 同步、场景相机/检测、任务服务和关节滑块 GUI，并安装模型与网格 |
+
+**构建产物**
+
+- `rebotarm_ros2_RS/build` 是 colcon 的中间目录，保存 CMake 缓存、生成的 ROS 接口和
+  各包的临时文件；`rebotarm_ros2_RS/install` 是运行目录，入口脚本、Python 模块、消息
+  库和 share 资源都在这里；`rebotarm_ros2_RS/log` 保存每次构建日志。
+- 当前脚本使用的就是这套嵌套构建：`scripts/rs_env.sh` 只 source
+  `rebotarm_ros2_RS/install/setup.bash`，构建由
+  `scripts/setup_rs_workspace_init.sh` 执行 `colcon build --symlink-install` 完成。
+  `--symlink-install` 让 Python 源码修改通常无需重新构建即可生效；修改
+  `rebotarm_msgs` 的 msg/srv/action 后仍必须重新执行 colcon build。
+- `rebotarm_ros2_RS/.venv` 使用 `--system-site-packages` 创建，安装硬件和 MuJoCo 的
+  pip 依赖；ROS 包本身由 colcon 安装到 `install`，不进入 venv。
+- 仓库根目录的 `build/`、`install/`、`log/` 是早期在根目录执行 colcon 留下的旧产物，
+  已被 `.gitignore` 忽略，当前脚本不会读取它们。它们不影响运行，确认没有进程使用后
+  可以删除；日常只使用 `rebotarm_ros2_RS/` 下的构建。
+- 网页控制台不需要构建，`node server.js` 直接提供静态文件；`web_mujoco` 通过
+  `npm run build` 生成 `dist/`，该目录不提交。运行期还会生成 `.env`、`.certs` 等本地
+  文件，应按需保留且不要提交。
 
 ## 2. 支持环境
 
@@ -317,11 +447,21 @@ REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE \
 真机控制器只用 `Ctrl+C` 停止，不要使用 `Ctrl+Z`。启动脚本会处理异常残留控制器，避免
 两个进程同时访问 CAN。
 
-### 9.4 查询关节电机温度
+### 9.4 查看关节电机温度
 
-温度只在驱动层（`motorbridge` 的 `MotorState.t_mos` / `t_rotor`），ROS 的
-`JointMotorState` 与网页都没有该字段，因此需要先 `Ctrl+C` 停止真机控制器，再用脚本
-直接读取（脚本会先用主动上报取一帧反馈，读完恢复关闭）：
+真机控制器运行时会随各关节状态话题发布温度（来自同一帧反馈，不增加总线负载），
+**不需要停控制器**：
+
+```bash
+ros2 topic echo /rebotarm/joints/joint1/state --field temperature
+ros2 topic echo /rebotarm/joints/joint1/state      # 含 temperature / temperature_rotor
+```
+
+网页 ROSBridge 面板的“电机温度”显示所有关节（含夹爪）中的最高驱动板温度，鼠标悬停
+可看到逐关节数值，达到 70 °C 时变红。
+
+若控制器未运行、需要离线排查，可用只读脚本（会占用 `can0`，因此必须先 `Ctrl+C`
+停止控制器）：
 
 ```bash
 ./scripts/read_rs_motor_temps.py                # 表格输出，默认阈值 70 °C
@@ -330,8 +470,9 @@ REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE \
 ```
 
 脚本会拒绝在 `reBotArmController` 运行时执行，避免两个进程争用 `can0`。
-RobStride 不上报转子温度，`转子温度` 列恒为 `0.0 °C`，请以 `MOS温度`（驱动板温度）
-为准；`状态字` 是电机原始 `status_code`，过温等故障会体现在这里。
+RobStride 不上报转子温度，`temperature_rotor`（转子温度）恒为 `0.0 °C`，请以
+`temperature`（驱动板/MOS 温度）为准；`status_code` 是电机原始状态字，过温等故障会
+体现在这里。
 
 ### 9.5 真机姿态 MuJoCo 跟随
 

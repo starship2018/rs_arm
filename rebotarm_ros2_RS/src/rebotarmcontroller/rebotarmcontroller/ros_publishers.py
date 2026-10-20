@@ -102,6 +102,7 @@ class JointStatePublisher:
         msg = JointState()
         msg.header.stamp = self._node.get_clock().now().to_msg()
         status_codes = self._hardware.get_joint_status_codes()
+        temperatures, rotor_temperatures = self._hardware.get_joint_temperatures()
         for i, name in enumerate(self._hardware.joint_names):
             motor_msg = JointMotorState()
             motor_msg.header = msg.header
@@ -110,6 +111,8 @@ class JointStatePublisher:
             motor_msg.velocity = float(vel[i])
             motor_msg.torque = float(effort[i])
             motor_msg.status_code = int(status_codes[i])
+            motor_msg.temperature = float(temperatures[i])
+            motor_msg.temperature_rotor = float(rotor_temperatures[i])
             self._joint_state_publishers[name].publish(motor_msg)
 
         msg.name = self._hardware.joint_names
@@ -168,6 +171,9 @@ class JointStatePublisher:
             gripper_msg.velocity = float(g_vel)
             gripper_msg.torque = float(g_torque)
             gripper_msg.status_code = int(g_status)
+            g_mos, g_rotor = self._hardware.get_gripper_temperature()
+            gripper_msg.temperature = float(g_mos)
+            gripper_msg.temperature_rotor = float(g_rotor)
             self._gripper_state_publisher.publish(gripper_msg)
 
         self._publisher.publish(msg)

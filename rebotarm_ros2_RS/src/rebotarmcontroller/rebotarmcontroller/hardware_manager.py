@@ -675,6 +675,30 @@ class HardwareManager:
                 codes.append(0)
         return codes
 
+    def get_joint_temperatures(self) -> tuple[list[float], list[float]]:
+        """Return cached (driver/MOS, rotor) temperatures in °C per arm joint."""
+        mos: list[float] = []
+        rotor: list[float] = []
+        for name in self.joint_names:
+            try:
+                st = self._robot._motor_map[name].get_state()
+            except Exception:
+                st = None
+            mos.append(float(st.t_mos) if st is not None else 0.0)
+            rotor.append(float(st.t_rotor) if st is not None else 0.0)
+        return mos, rotor
+
+    def get_gripper_temperature(self) -> tuple[float, float]:
+        if not self.has_gripper or not self._gripper_name:
+            return 0.0, 0.0
+        try:
+            st = self._robot._motor_map[self._gripper_name].get_state()
+        except Exception:
+            st = None
+        if st is None:
+            return 0.0, 0.0
+        return float(st.t_mos), float(st.t_rotor)
+
     # ------------------------------------------------------------------
     # gravity compensation
     # ------------------------------------------------------------------

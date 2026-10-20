@@ -225,7 +225,7 @@ REBOTARM_RS_HARDWARE_CONFIRM=I_UNDERSTAND_RS_WILL_MOVE ./rebotarm start rs
 | 话题 | 类型 | 内容 |
 |---|---|---|
 | `/rebotarm/joint_states` | `sensor_msgs/msg/JointState` | 六轴和两个手指的统一状态 |
-| `/rebotarm/joints/<name>/state` | `rebotarm_msgs/msg/JointMotorState` | 单电机位置、速度、力矩、状态码 |
+| `/rebotarm/joints/<name>/state` | `rebotarm_msgs/msg/JointMotorState` | 单电机位置、速度、力矩、状态码、驱动板/转子温度 |
 | `/rebotarm/gripper/state` | `JointMotorState` | 夹爪电机原始角度状态 |
 | `/rebotarm/control_target` | `JointState` | 最终控制目标 |
 | `/rebotarm/control_reference` | `JointState` | 在线平滑参考；`effort` 携带参考加速度 |

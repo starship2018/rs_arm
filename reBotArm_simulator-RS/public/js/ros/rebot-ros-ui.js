@@ -64,6 +64,10 @@
     visionDetections: `/${NS}/vision/color_blocks/detections`,
     simAnimation: `/${NS}/sim/animation_event`
   };
+  const JOINT_STATE_TOPICS = Object.fromEntries(
+    JOINT_NAMES.map((name) => [name, `/${NS}/joints/${name}/state`])
+  );
+  const MOTOR_TEMP_WARN_C = 70;
   const REQUIRED_SERVICES = {
     gravityStart: `/${NS}/gravity_compensation/start`,
     gravityStop: `/${NS}/gravity_compensation/stop`,
@@ -89,6 +93,7 @@
     status: document.getElementById('ros-status'),
     message: document.getElementById('ros-message'),
     feedbackError: document.getElementById('ros-feedback-error'),
+    motorTemp: document.getElementById('ros-motor-temp'),
     enable: document.getElementById('ros-enable'),
     disable: document.getElementById('ros-disable'),
     safeHome: document.getElementById('ros-safe-home'),
@@ -267,6 +272,14 @@
     client.subscribe(REQUIRED_TOPICS.mujocoJointStates, 'sensor_msgs/msg/JointState', handleMujocoJointStates, { throttleRate: 40 });
   }
   client.subscribe(REQUIRED_TOPICS.gripper, 'rebotarm_msgs/msg/JointMotorState', handleGripperState, { throttleRate: 80 });
+  JOINT_NAMES.forEach((name) => {
+    client.subscribe(
+      JOINT_STATE_TOPICS[name],
+      'rebotarm_msgs/msg/JointMotorState',
+      (msg) => handleJointTemperature(name, msg),
+      { throttleRate: 250 }
+    );
+  });
   client.subscribe(REQUIRED_TOPICS.armStatus, 'rebotarm_msgs/msg/ArmStatus', handleArmStatus, { throttleRate: 200 });
   client.subscribe(REQUIRED_TOPICS.cameraImage, 'sensor_msgs/msg/Image', handleCameraImage, { throttleRate: 120 });
   client.subscribe(REQUIRED_TOPICS.visionDetections, 'std_msgs/msg/String', handleVisionDetections, { throttleRate: 180 });
@@ -286,6 +299,7 @@
    if (detail.state === 'closed' || detail.state === 'error') {
      finishHardwareTeachLocal(detail.state === 'error' ? 'ROS 连接异常，真机示教已停止' : 'ROS 连接断开，真机示教已停止');
      resetFeedbackRenderer();
+     resetMotorTemperatureDisplay();
      updateGravityStatus(false, t('msg.rosNotConnected'), 'connection');
    }
   if (detail.state === 'open') {
@@ -917,6 +931,34 @@
     return ratio * OPEN_GRIPPER_M;
   }
 
+  const motorTemperatures = new Map();
+
+  function resetMotorTemperatureDisplay() {
+    motorTemperatures.clear();
+    if (!els.motorTemp) return;
+    els.motorTemp.textContent = t('ros.motorTempWaiting');
+    els.motorTemp.title = '';
+    els.motorTemp.classList.remove('is-warn');
+  }
+
+  function renderMotorTemperature() {
+    if (!els.motorTemp || motorTemperatures.size === 0) return;
+    const names = [...JOINT_NAMES, 'gripper'].filter((name) => motorTemperatures.has(name));
+    const peak = Math.max(...names.map((name) => motorTemperatures.get(name)));
+    els.motorTemp.textContent = t('ros.motorTempPeak', { value: peak.toFixed(1) });
+    els.motorTemp.title = names
+      .map((name) => `${name}: ${motorTemperatures.get(name).toFixed(1)} °C`)
+      .join('\n');
+    els.motorTemp.classList.toggle('is-warn', peak >= MOTOR_TEMP_WARN_C);
+  }
+
+  function handleJointTemperature(name, msg) {
+    const value = Number(msg && msg.temperature);
+    if (!Number.isFinite(value) || value <= 0) return;
+    motorTemperatures.set(name, value);
+    renderMotorTemperature();
+  }
+
   function handleGripperState(msg) {
     const useDriverState = TARGET_KEY !== 'simulation' || !mujocoStateIsFresh();
     if (useDriverState && typeof msg.position === 'number') {
@@ -925,6 +967,10 @@
     }
     if (useDriverState && typeof msg.velocity === 'number') {
       latestGripperVelocity = Math.abs(msg.velocity) * OPEN_GRIPPER_M / OPEN_GRIPPER_MOTOR_RAD;
+    }
+    if (Number.isFinite(Number(msg.temperature)) && Number(msg.temperature) > 0) {
+      motorTemperatures.set('gripper', Number(msg.temperature));
+      renderMotorTemperature();
     }
     updateGripperModeDisplay();
     if (
@@ -2206,6 +2252,7 @@
     latestArmEnabled = false;
     listedTopics.clear();
     listedServices.clear();
+    resetMotorTemperatureDisplay();
   }
 
   function canConnectWebSocketUrl(url) {

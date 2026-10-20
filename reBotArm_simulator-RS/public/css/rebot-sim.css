@@ -573,6 +573,10 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: right;
 }
 
+.ros-feedback strong.is-warn {
+  color: #ff7a7a;
+}
+
 #ros-gravity-status {
   max-width: 72%;
   text-align: right;

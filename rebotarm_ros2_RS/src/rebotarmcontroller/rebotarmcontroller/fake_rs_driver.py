@@ -399,6 +399,9 @@ class FakeRsDriver(Node):
             state.velocity = float(self.velocities[index])
             state.torque = 0.0
             state.status_code = 0
+            # Simulated driver-board temperature so the web panel has values.
+            state.temperature = 35.0 + 4.0 * abs(float(self.velocities[index]))
+            state.temperature_rotor = 0.0
             self.joint_motor_pubs[index].publish(state)
 
         gripper_state = JointMotorState()
@@ -408,6 +411,8 @@ class FakeRsDriver(Node):
         gripper_state.velocity = float(self.gripper_velocity)
         gripper_state.torque = 0.0
         gripper_state.status_code = 0
+        gripper_state.temperature = 35.0 + 4.0 * abs(float(self.gripper_velocity))
+        gripper_state.temperature_rotor = 0.0
         self.gripper_state_pub.publish(gripper_state)
 
     def publish_status(self) -> None:

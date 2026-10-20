@@ -213,6 +213,7 @@ class ReBotArmToolBridge(Node):
                 "velocity": float(msg.velocity),
                 "torque": float(msg.torque),
                 "status_code": int(msg.status_code),
+                "temperature": float(msg.temperature),
             }
             self._gripper_state_at = time.monotonic()
 

@@ -17,7 +17,7 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration("use_rviz")
 
     urdf_file = PathJoinSubstitution(
-        [bringup_share, "description", "urdf", "ReBot_Arm_RS.urdf"]
+        [bringup_share, "description", "urdf", "ReBot_Arm_RS.urdf.xacro"]
     )
     rviz_urdf_compat = PathJoinSubstitution(
         [bringup_share, "launch", "rviz_urdf_compat.py"]

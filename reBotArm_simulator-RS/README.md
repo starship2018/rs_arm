@@ -136,3 +136,11 @@ JSON，JavaScript number 与整数纳秒时间戳原样保留。回放同样使�
 - 夹爪位置速度：`/<namespace>/gripper/cmd/pos_vel`
 - 状态：`/<namespace>/joint_states`、`arm_status`、`gripper/state`
 - 网页内部夹爪单位是米；ROS 2 夹爪电机位置单位是弧度。
+
+### 完整机器人模型
+
+网页服务使用 `../rebotarm_ros2_RS/src/rebotarm_bringup/description/urdf/ReBot_Arm_RS.urdf.xacro`
+作为完整模型入口，启动时通过 Python `xacro` 展开，默认含 D405 相机和支架。
+请先加载 ROS 环境（例如 `source /opt/ros/humble/setup.bash`），
+确认 `python3 -c "import xacro"` 成功后执行 `npm start`。
+网页不再回退到本目录的机械臂本体副本，也不单独加载相机装配。

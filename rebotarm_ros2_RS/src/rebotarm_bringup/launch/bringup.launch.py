@@ -69,7 +69,7 @@ def generate_launch_description():
     ee_frame_id = LaunchConfiguration("ee_frame_id")
     disable_after_safe_home = LaunchConfiguration("disable_after_safe_home")
     urdf_file = PathJoinSubstitution(
-        [bringup_share, "description", "urdf", "ReBot_Arm_RS.urdf"]
+        [bringup_share, "description", "urdf", "ReBot_Arm_RS.urdf.xacro"]
     )
     rviz_urdf_compat = PathJoinSubstitution(
         [bringup_share, "launch", "rviz_urdf_compat.py"]

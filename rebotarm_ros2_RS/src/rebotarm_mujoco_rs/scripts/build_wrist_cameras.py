@@ -53,7 +53,9 @@ def build():
     assets, geoms, definitions = [], [], {}
     copied = {}
     for variant in ("d405", "d435i", "gemini2", "uvc32"):
-        urdf = SOURCE / "urdf" / f"{variant}.urdf"
+        camera_package = REPO / "rebotarm_ros2_RS/src/rebotarm_bringup"
+        urdf = (camera_package / "description/wrist-cameras/urdf/d405.urdf"
+                if variant == "d405" else SOURCE / "urdf" / f"{variant}.urdf")
         root = ET.parse(urdf).getroot()
         links = {link.get("name"): link for link in root.findall("link")}
         joints = {joint.find("child").get("link"): joint for joint in root.findall("joint")}
@@ -71,7 +73,11 @@ def build():
                 mesh = visual.find("geometry/mesh")
                 if mesh is None:
                     continue
-                src = (urdf.parent / mesh.get("filename")).resolve()
+                filename = mesh.get("filename")
+                if filename.startswith("package://rebotarm_bringup/"):
+                    src = camera_package / filename.removeprefix("package://rebotarm_bringup/")
+                else:
+                    src = (urdf.parent / filename).resolve()
                 scale = mesh.get("scale", "1 1 1")
                 local = frame(link_name) @ transform(visual.find("origin"))
                 pieces = []

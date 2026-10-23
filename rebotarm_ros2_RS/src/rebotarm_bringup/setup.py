@@ -1,4 +1,5 @@
 from glob import glob
+from pathlib import Path
 from setuptools import setup
 
 package_name = "rebotarm_bringup"
@@ -16,11 +17,17 @@ setup(
         (f"share/{package_name}", ["package.xml"]),
         (f"share/{package_name}/launch", glob("launch/*.py")),
         (f"share/{package_name}/config", config_files),
-        (f"share/{package_name}/description/urdf", glob("description/urdf/*.urdf")),
+        (f"share/{package_name}/description/urdf", glob("description/urdf/*")),
         (
             f"share/{package_name}/description/meshes_rs",
             glob("description/meshes_rs/*"),
         ),
+        *[
+            (f"share/{package_name}/{directory}", [str(p) for p in directory.iterdir() if p.is_file()])
+            for directory in sorted(Path("description/wrist-cameras").rglob("*"))
+            if directory.is_dir()
+        ],
+        (f"share/{package_name}/description/wrist-cameras", glob("description/wrist-cameras/*.*")),
         (f"share/{package_name}/rviz", glob("rviz/*.rviz")),
     ],
     install_requires=["setuptools"],

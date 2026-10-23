@@ -161,9 +161,7 @@
     setupScene();
     setupEvents();
     wristCamera = new window.RebotWristCamera(
-      document.getElementById('wrist-camera-model'),
-      document.getElementById('wrist-camera-model-status'),
-      styleRobot
+      document.getElementById('wrist-camera-model-status')
     );
     updateTeachingStatus();
     loadRobot();

@@ -8,8 +8,8 @@ keeps the same meshes, poses, and shared URDF colours while giving RViz one
 unambiguous material per rendered link.
 """
 
+import argparse
 import re
-import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -79,11 +79,16 @@ def make_rviz_compatible(urdf_xml: str) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print(f"usage: {Path(sys.argv[0]).name} ROBOT.urdf", file=sys.stderr)
-        return 2
-    source = Path(sys.argv[1])
-    print(make_rviz_compatible(source.read_text(encoding="utf-8")))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("model", type=Path)
+    args = parser.parse_args()
+    if args.model.suffix == ".xacro":
+        import xacro
+
+        xml = xacro.process_file(str(args.model)).toxml()
+    else:
+        xml = args.model.read_text(encoding="utf-8")
+    print(make_rviz_compatible(xml))
     return 0
 
 

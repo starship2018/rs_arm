@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const { URL } = require('url');
 
@@ -33,19 +34,12 @@ const BRINGUP_DIR = path.resolve(
   path.join(ROOT, '..', 'rebotarm_ros2_RS', 'src', 'rebotarm_bringup')
 );
 const ROBOT_VARIANT = 'b601_rs';
-const ROS_URDF_FILE = path.join(
-  BRINGUP_DIR,
-  'description',
-  'urdf',
-  'ReBot_Arm_RS.urdf'
-);
-const ROS_MESHES_DIR = path.join(BRINGUP_DIR, 'description', 'meshes_rs');
-const URDF_FILE = fs.existsSync(ROS_URDF_FILE)
-  ? ROS_URDF_FILE
-  : path.join(ROOT, 'description', 'urdf', 'ReBot_Arm_RS.urdf');
-const MESHES_DIR = fs.existsSync(ROS_MESHES_DIR)
-  ? ROS_MESHES_DIR
-  : path.join(ROOT, 'description', 'meshes_rs');
+const URDF_FILE = path.join(BRINGUP_DIR, 'description', 'urdf', 'ReBot_Arm_RS.urdf.xacro');
+const ROBOT_DESCRIPTION = execFileSync('python3', [
+  '-c', 'import sys, xacro; print(xacro.process_file(sys.argv[1]).toxml())', URDF_FILE
+], { encoding: 'utf8' });
+const MESHES_DIR = path.join(BRINGUP_DIR, 'description', 'meshes_rs');
+const CAMERA_MESHES_DIR = path.join(BRINGUP_DIR, 'description', 'wrist-cameras', 'meshes');
 const GRIPPER_MESHES_DIR = path.join(ROOT, 'split_meshes', 'grouped_gripper');
 const DEFAULT_KEY_FILE = path.join(ROOT, '.certs', 'rebotarm-local-server.key');
 const DEFAULT_CERT_FILE = path.join(ROOT, '.certs', 'rebotarm-local-server.crt');
@@ -186,7 +180,25 @@ function requestHandler(req, res) {
   }
 
   if (urlPath === '/api/urdf') {
-    sendFile(res, URDF_FILE);
+    send(res, 200, ROBOT_DESCRIPTION, MIME_TYPES['.urdf']);
+    return;
+  }
+
+  const cameraMeshMatch = urlPath.match(/^\/api\/description\/wrist-cameras\/meshes\/(.+)$/);
+  if (cameraMeshMatch) {
+    let filename;
+    try {
+      filename = decodeURIComponent(cameraMeshMatch[1]);
+    } catch (_) {
+      sendJson(res, 400, { error: 'Invalid mesh path' });
+      return;
+    }
+    const filePath = path.resolve(CAMERA_MESHES_DIR, filename);
+    if (!filePath.startsWith(`${CAMERA_MESHES_DIR}${path.sep}`)) {
+      sendJson(res, 403, { error: 'Forbidden' });
+      return;
+    }
+    sendFile(res, filePath);
     return;
   }
 

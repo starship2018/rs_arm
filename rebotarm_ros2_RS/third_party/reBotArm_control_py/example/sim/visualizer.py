@@ -27,6 +27,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from reBotArm_control_py.kinematics import _resolve_urdf
 
 
+def _load_visual_model(urdf_path=None):
+    path, pkg_dir = _resolve_urdf(urdf_path)
+    sdk_root = Path(__file__).resolve().parents[2]
+    if urdf_path is None and Path(path).resolve() == sdk_root / "urdf/RS/urdf/ReBot_Arm_RS.urdf":
+        # Display the complete assembly without changing calibrated control dynamics.
+        package = sdk_root.parents[1] / "src/rebotarm_bringup"
+        path = str(package / "description/urdf/ReBot_Arm_RS.urdf.xacro")
+        pkg_dir = str(package.parent)
+    if Path(path).suffix == ".xacro":
+        import xacro
+
+        xml = xacro.process_file(path).toxml()
+    else:
+        xml = Path(path).read_text(encoding="utf-8")
+    model = pin.buildModelFromXML(xml)
+    visuals = pin.buildGeomFromUrdfString(
+        model, xml, pin.GeometryType.VISUAL, package_dirs=[pkg_dir]
+    )
+    return model, visuals
+
+
 class Visualizer:
     """MeshCat + Pinocchio 机器人可视化器。
 
@@ -50,14 +71,8 @@ class Visualizer:
             open_browser: 是否在终端打印 MeshCat 访问地址。
             urdf_path:    URDF 文件路径，留空则从 hardware_yaml 指向的硬件配置文件中读取。
         """
-        urdf_path, pkg_dir = _resolve_urdf(urdf_path)
-
-        self._model = pin.buildModelFromUrdf(urdf_path)
+        self._model, self._visual_model = _load_visual_model(urdf_path)
         self._data = self._model.createData()
-
-        self._visual_model = pin.buildGeomFromUrdf(
-            self._model, urdf_path, pin.GeometryType.VISUAL, package_dirs=[pkg_dir]
-        )
         self._visual_data = self._visual_model.createData()
 
         # zmq_url=None 时启动新服务器；传入 zmq_url 字符串则连接到已有服务器
